@@ -1,3 +1,4 @@
+
 name: Build Android APK from Drive ZIP
 
 on: workflow_dispatch:
@@ -65,7 +66,7 @@ steps:
       ls -la build/app/outputs/flutter-apk || true
       ls -la build/app/outputs || true
 
-  - name: Upload APK artifact
+  - name: Upload APK artifact uses: actions/upload-artifact@v4 with: name: app-debug-apk path: build/app/outputs/flutter-apk/app-debug.apk
     uses: actions/upload-artifact@v4
     with:
       name: app-debug-apk
