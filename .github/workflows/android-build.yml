@@ -10,33 +10,30 @@ jobs:
       PROJECT_ZIP_FILEID: '1k1Q2cDx2biokwKzMg_Xq4kLRkUupQ4GU'
 
     steps:
-     name: Checkout repository
-  uses: actions/checkout@v4
-  
-    steps:
-   - name: Checkout repository
-    uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-   - name: Set up JDK 17
-    uses: actions/setup-java@v4
-    with:
-      distribution: temurin
-      java-version: '17'
-    
-    - name: Verify Java
-  run: java -version
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-     - name: Export Android SDK env and update PATH
-  run: |
-    echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-    echo "PATH=/usr/local/lib/android/sdk/cmdline-tools/latest/bin:/usr/local/lib/android/sdk/platform-tools:$PATH" >> $GITHUB_ENV
+      - name: Verify Java
+        run: |
+          java -version
+          echo "JAVA_HOME=$JAVA_HOME"
+          which java || true
+
+      - name: Export Android SDK env and update PATH
+        run: |
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "PATH=/usr/local/lib/android/sdk/cmdline-tools/latest/bin:/usr/local/lib/android/sdk/platform-tools:$PATH" >> $GITHUB_ENV
 
       - name: Verify sdkmanager + accept licenses
-  run: |
-    sdkmanager --version
-    yes | sdkmanager --licenses
-      - name: Checkout (creates initial repo files)
-        uses: actions/checkout@v4
+        run: |
+          sdkmanager --version || true
+          yes | sdkmanager --licenses || true
 
       - name: Install unzip, curl and rsync
         run: sudo apt-get update && sudo apt-get install -y unzip curl rsync
@@ -73,7 +70,6 @@ jobs:
         shell: bash
         run: |
           echo "Workspace: $GITHUB_WORKSPACE"
-          echo "Listing root files:"
           ls -la "$GITHUB_WORKSPACE"
           if [ -f "$GITHUB_WORKSPACE/pubspec.yaml" ]; then
             echo "Found pubspec.yaml at project root"
@@ -84,19 +80,14 @@ jobs:
             exit 1
           fi
 
-      - name: Setup Java (Temurin)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.10.6'
 
-      - name: Accept Android licenses
-        run: yes | $FLUTTER_ROOT/bin/flutter doctor --android-licenses || true
+      - name: Accept Android licenses (Flutter)
+        run: |
+          yes | $FLUTTER_ROOT/bin/flutter doctor --android-licenses || true
 
       - name: Get Flutter dependencies
         run: flutter pub get
