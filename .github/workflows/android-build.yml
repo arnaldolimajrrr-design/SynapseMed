@@ -1,4 +1,3 @@
-
 name: Build Android APK from Drive ZIP
 
 on: workflow_dispatch:
@@ -15,7 +14,6 @@ steps:
   - name: Download project ZIP from Google Drive
     run: |
       FILEID="${PROJECT_ZIP_FILEID}"
-      # try to get Google Drive confirm token (handles large files)
       curl -c /tmp/gdcookies "https://drive.google.com/uc?export=download&id=${FILEID}" -s -o /tmp/gdpage.html
       CONFIRM=$(grep -o 'confirm=[^&"]*' /tmp/gdpage.html | sed 's/confirm=//' | head -n 1 || true)
       if [ -n "$CONFIRM" ]; then
@@ -66,8 +64,8 @@ steps:
       ls -la build/app/outputs/flutter-apk || true
       ls -la build/app/outputs || true
 
-  - name: Upload APK artifact uses: actions/upload-artifact@v4 with: name: app-debug-apk path: build/app/outputs/flutter-apk/app-debug.apk
+  - name: Upload APK artifact
     uses: actions/upload-artifact@v4
     with:
       name: app-debug-apk
-      path: build/app/outputs/flutter-apk/app-debug.apk
+      path: build/app/outputs/flutter-apk/*.apk
