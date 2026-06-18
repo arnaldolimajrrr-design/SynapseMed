@@ -1,0 +1,62 @@
+steps:
+  - name: Checkout (creates initial repo files)
+    uses: actions/checkout@v4
+
+  - name: Install unzip and curl
+    run: sudo apt-get update && sudo apt-get install -y unzip curl rsync
+
+  - name: Download project ZIP from Google Drive
+    run: |
+      FILEID="${PROJECT_ZIP_FILEID}"
+      curl -c /tmp/gdcookies "https://drive.google.com/uc?export=download&id=${FILEID}" -s -o /tmp/gdpage.html
+      CONFIRM=$(grep -o 'confirm=[^&"]*' /tmp/gdpage.html | sed 's/confirm=//' | head -n 1 || true)
+      if [ -n "$CONFIRM" ]; then
+        curl -L -b /tmp/gdcookies "https://drive.google.com/uc?export=download&confirm=${CONFIRM}&id=${FILEID}" -o project.zip
+      else
+        curl -L -o project.zip "https://drive.google.com/uc?export=download&id=${FILEID}"
+      fi
+      ls -lh project.zip || true
+
+  - name: Unzip project and copy into workspace
+    run: |
+      unzip -q project.zip -d project || true
+      if [ -d project ]; then
+        first=$(find project -maxdepth 1 -mindepth 1 -type d | head -n 1)
+        if [ -n "$first" ]; then
+          rsync -a "$first"/ $GITHUB_WORKSPACE/
+        else
+          rsync -a project/ $GITHUB_WORKSPACE/
+        fi
+      fi
+      ls -la $GITHUB_WORKSPACE
+
+  - name: Setup Java (Temurin)
+    uses: actions/setup-java@v4
+    with:
+      distribution: temurin
+      java-version: '11'
+
+  - name: Setup Flutter
+    uses: subosito/flutter-action@v2
+    with:
+      flutter-version: '3.10.6'
+
+  - name: Accept Android licenses
+    run: yes | $FLUTTER_ROOT/bin/flutter doctor --android-licenses || true
+
+  - name: Get Flutter dependencies
+    run: flutter pub get
+
+  - name: Build debug APK
+    run: flutter build apk --debug --no-tree-shake-icons
+
+  - name: Debug - list apk files
+    run: |
+      ls -la build/app/outputs/flutter-apk || true
+      ls -la build/app/outputs || true
+
+  - name: Upload APK artifact
+    uses: actions/upload-artifact@v4
+    with:
+      name: app-debug-apk
+      path: build/**/*.apk
