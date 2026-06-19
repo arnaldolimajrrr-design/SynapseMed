@@ -19,20 +19,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install unzip and curl
-        run: sudo apt-get update && sudo apt-get install -y unzip curl rsync
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y unzip curl
 
       - name: Download and Unzip project
         run: |
-          curl -c /tmp/gdcookies "https://drive.google.com/uc?export=download&id=${{ env.PROJECT_ZIP_FILEID }}" -s -o /tmp/gdpage.html
-          CONFIRM=$(grep -o 'confirm=[^&"]*' /tmp/gdpage.html | sed 's/confirm=//' | head -n 1 || true)
-          URL="https://drive.google.com/uc?export=download&confirm=${CONFIRM}&id=${{ env.PROJECT_ZIP_FILEID }}"
-          [ -z "$CONFIRM" ] && URL="https://drive.google.com/uc?export=download&id=${{ env.PROJECT_ZIP_FILEID }}"
-          curl -L -b /tmp/gdcookies "$URL" -o project.zip
+          curl -L "https://drive.google.com/uc?export=download&id=${{ env.PROJECT_ZIP_FILEID }}" -o project.zip
           mkdir -p project_source
           unzip -q project.zip -d project_source
-          PROJECT_ROOT=$(find project_source -maxdepth 2 -name "pubspec.yaml" -exec dirname {} \;)
-          echo "PROJECT_ROOT=$PROJECT_ROOT" >> $GITHUB_ENV
+          # Lista o conteúdo para sabermos onde o projeto está
+          echo "Conteúdo extraído:"
+          find project_source -maxdepth 3
+          # Define o caminho base
+          echo "PROJECT_ROOT=$(find project_source -name 'pubspec.yaml' -exec dirname {} \; | head -n 1)" >> $GITHUB_ENV
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -42,13 +41,19 @@ jobs:
       - name: Build APK
         working-directory: ${{ env.PROJECT_ROOT }}
         run: |
-          chmod +x gradlew
-          yes | flutter doctor --android-licenses
-          flutter pub get
-          flutter build apk --debug --no-tree-shake-icons
+          echo "Diretório atual: $(pwd)"
+          ls -la
+          # Tenta encontrar o gradlew e dar permissão
+          if [ -f "android/gradlew" ]; then
+            chmod +x android/gradlew
+            cd android && ./gradlew assembleDebug
+          else
+            chmod +x gradlew
+            flutter build apk --debug --no-tree-shake-icons
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: ${{ env.PROJECT_ROOT }}/build/app/outputs/flutter-apk/*.apk
+          path: '**/build/**/outputs/flutter-apk/*.apk'
